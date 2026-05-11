@@ -7,8 +7,8 @@ struct ContentView: View {
     @State private var selectedJobID: ImageJob.ID?
     @State private var canvasWidth = ""
     @State private var canvasHeight = ""
-    @State private var paddingX = "0"
-    @State private var paddingY = "0"
+    @State private var paddingX = ""
+    @State private var paddingY = ""
     @State private var didInitializeCanvas = false
     @State private var previewImage: NSImage?
     @State private var isExporting = false
@@ -130,7 +130,7 @@ struct ContentView: View {
     }
 
     private var currentPadding: CanvasPadding? {
-        guard let x = Int(paddingX), let y = Int(paddingY) else {
+        guard let x = paddingValue(from: paddingX), let y = paddingValue(from: paddingY) else {
             return nil
         }
         return try? CanvasPadding(x: x, y: y)
@@ -216,6 +216,10 @@ struct ContentView: View {
 
         isExporting = false
         summaryText = "Exported \(exported). Failed \(failed)."
+    }
+
+    private func paddingValue(from text: String) -> Int? {
+        text.isEmpty ? 0 : Int(text)
     }
 
     private func statusColor(_ status: ImageJobStatus) -> Color {

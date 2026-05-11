@@ -46,6 +46,12 @@ avatar.png already exists:
 avatar.png   -> avatar 2.png
 ```
 
+## Download And Run
+
+Download the latest `Image-Centerer-macOS-*.zip` from GitHub Releases, unzip it, and open `Image Centerer.app`.
+
+If macOS blocks the app because it was downloaded from the internet, right-click the app and choose **Open**. This project does not use Developer ID signing or notarization.
+
 ## Main User Flow
 
 1. Open the app.

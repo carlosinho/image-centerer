@@ -62,7 +62,11 @@ If macOS blocks the app because it was downloaded from the internet, right-click
 6. Select an image in the sidebar to preview its processed result.
 7. Click **Export**.
 8. Choose an output folder.
-9. The app processes every selected image and shows exported/failed counts.
+9. The app processes every selected image, shows progress, and then shows exported/failed counts.
+
+Preview updates live as the selected image, canvas size, or padding changes. Preview rendering is optimized for interactivity: the app cancels stale preview work while you type and renders a capped preview bitmap instead of running the full export encoder on every keystroke.
+
+Exports run asynchronously so the window stays responsive. Use **Cancel** to stop a long batch after the current in-flight item finishes.
 
 The app currently uses standard file picker dialogs. It does not implement drag-and-drop.
 
@@ -71,7 +75,7 @@ The app currently uses standard file picker dialogs. It does not implement drag-
 - Swift 6.2 package
 - macOS 15 minimum target
 - SwiftUI for the app UI
-- AppKit `NSOpenPanel` for input and export folder selection
+- AppKit `NSOpenPanel` for input/export folder selection and `NSImage` display in the app target
 - CoreGraphics and ImageIO for image decoding, rendering, and encoding
 - UniformTypeIdentifiers for PNG/JPEG format identifiers
 - Shell packaging script using `swift build`, `sips`, `iconutil`, `codesign`, and `ditto`

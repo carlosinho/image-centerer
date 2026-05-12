@@ -1,10 +1,9 @@
-import AppKit
 import CoreGraphics
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-public struct CanvasSize: Equatable {
+public struct CanvasSize: Equatable, Sendable {
     public let width: Int
     public let height: Int
 
@@ -17,7 +16,7 @@ public struct CanvasSize: Equatable {
     }
 }
 
-public struct CanvasPadding: Equatable {
+public struct CanvasPadding: Equatable, Sendable {
     public let x: Int
     public let y: Int
 
@@ -30,7 +29,7 @@ public struct CanvasPadding: Equatable {
     }
 }
 
-public enum ImageFormat: Equatable {
+public enum ImageFormat: Equatable, Sendable {
     case png
     case jpeg(preferredExtension: String)
 
@@ -53,14 +52,20 @@ public enum ImageFormat: Equatable {
     }
 }
 
-public struct ProcessedImage {
+public struct ProcessedImage: Sendable {
     public let data: Data
     public let format: ImageFormat
     public let pixelWidth: Int
     public let pixelHeight: Int
 }
 
-public protocol ImageCenteringProcessing {
+public struct PreviewImage: Sendable {
+    public let cgImage: CGImage
+    public let pixelWidth: Int
+    public let pixelHeight: Int
+}
+
+public protocol ImageCenteringProcessing: Sendable {
     func processImage(at sourceURL: URL, canvasSize: CanvasSize, padding: CanvasPadding) throws -> ProcessedImage
 }
 
@@ -93,7 +98,7 @@ public enum ImageProcessingError: LocalizedError {
     }
 }
 
-public struct ImageCenteringProcessor: ImageCenteringProcessing {
+public struct ImageCenteringProcessor: ImageCenteringProcessing, Sendable {
     private let jpegQuality: CGFloat
 
     public init(jpegQuality: CGFloat = 0.95) {
@@ -125,6 +130,44 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing {
         )
     }
 
+    public func previewImage(
+        at sourceURL: URL,
+        canvasSize: CanvasSize,
+        padding: CanvasPadding = try! CanvasPadding(),
+        maxPixelDimension: Int = 1400
+    ) throws -> PreviewImage {
+        guard maxPixelDimension > 0 else {
+            throw ImageProcessingError.invalidCanvasSize
+        }
+        _ = try ImageFormat.detect(from: sourceURL)
+        guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil) else {
+            throw ImageProcessingError.decodeFailed
+        }
+
+        let previewCanvasSize = canvasSize.scaledToFit(maxPixelDimension: maxPixelDimension)
+        let previewPadding = padding.scaled(from: canvasSize, to: previewCanvasSize)
+        let targetSourceDimension = sourceTargetDimension(
+            from: source,
+            canvasSize: previewCanvasSize,
+            padding: previewPadding
+        ) ?? max(previewCanvasSize.width, previewCanvasSize.height)
+
+        guard let sourceImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: targetSourceDimension,
+            kCGImageSourceShouldCacheImmediately: true
+        ] as CFDictionary) else {
+            throw ImageProcessingError.decodeFailed
+        }
+
+        let rendered = try render(sourceImage, canvasSize: previewCanvasSize, padding: previewPadding)
+        return PreviewImage(
+            cgImage: rendered,
+            pixelWidth: previewCanvasSize.width,
+            pixelHeight: previewCanvasSize.height
+        )
+    }
+
     public func imageInfo(at sourceURL: URL) throws -> (format: ImageFormat, width: Int, height: Int) {
         let format = try ImageFormat.detect(from: sourceURL)
         guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil),
@@ -152,7 +195,7 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing {
             throw ImageProcessingError.cannotCreateContext
         }
 
-        context.setFillColor(NSColor.white.cgColor)
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         context.interpolationQuality = .high
 
@@ -188,6 +231,53 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing {
         }
         return data as Data
     }
+}
+
+private extension CanvasSize {
+    func scaledToFit(maxPixelDimension: Int) -> CanvasSize {
+        let longestSide = max(width, height)
+        guard longestSide > maxPixelDimension else {
+            return self
+        }
+        let scale = CGFloat(maxPixelDimension) / CGFloat(longestSide)
+        return try! CanvasSize(
+            width: max(1, Int((CGFloat(width) * scale).rounded())),
+            height: max(1, Int((CGFloat(height) * scale).rounded()))
+        )
+    }
+}
+
+private extension CanvasPadding {
+    func scaled(from sourceSize: CanvasSize, to targetSize: CanvasSize) -> CanvasPadding {
+        let scaleX = CGFloat(targetSize.width) / CGFloat(sourceSize.width)
+        let scaleY = CGFloat(targetSize.height) / CGFloat(sourceSize.height)
+        return try! CanvasPadding(
+            x: max(0, Int((CGFloat(x) * scaleX).rounded())),
+            y: max(0, Int((CGFloat(y) * scaleY).rounded()))
+        )
+    }
+}
+
+private func sourceTargetDimension(
+    from source: CGImageSource,
+    canvasSize: CanvasSize,
+    padding: CanvasPadding
+) -> Int? {
+    guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+          let imageWidth = properties[kCGImagePropertyPixelWidth] as? Int,
+          let imageHeight = properties[kCGImagePropertyPixelHeight] as? Int else {
+        return nil
+    }
+
+    let placement = Placement(
+        imageWidth: CGFloat(imageWidth),
+        imageHeight: CGFloat(imageHeight),
+        canvasWidth: CGFloat(canvasSize.width),
+        canvasHeight: CGFloat(canvasSize.height),
+        paddingX: CGFloat(padding.x),
+        paddingY: CGFloat(padding.y)
+    )
+    return max(1, Int(max(placement.imageDrawRect.width, placement.imageDrawRect.height).rounded(.up)))
 }
 
 private struct Placement {

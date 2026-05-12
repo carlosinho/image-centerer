@@ -13,8 +13,12 @@ struct ContentView: View {
     @State private var previewImage: NSImage?
     @State private var isExporting = false
     @State private var summaryText = ""
+    @State private var previewTask: Task<Void, Never>?
+    @State private var exportTask: Task<Void, Never>?
+    @State private var exportProgressText = ""
 
     private let processor = ImageCenteringProcessor()
+    private let previewMaxPixelDimension = 1400
 
     var body: some View {
         NavigationSplitView {
@@ -42,6 +46,13 @@ struct ContentView: View {
                 controls
                 Divider()
                 preview
+                if !exportProgressText.isEmpty {
+                    Text(exportProgressText)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
                 if !summaryText.isEmpty {
                     Text(summaryText)
                         .font(.callout)
@@ -56,6 +67,10 @@ struct ContentView: View {
         .onChange(of: canvasHeight) { _, _ in refreshPreview() }
         .onChange(of: paddingX) { _, _ in refreshPreview() }
         .onChange(of: paddingY) { _, _ in refreshPreview() }
+        .onDisappear {
+            previewTask?.cancel()
+            exportTask?.cancel()
+        }
     }
 
     private var controls: some View {
@@ -64,9 +79,12 @@ struct ContentView: View {
                 addImages(FileSelection.selectInputImages())
             }
             Button("Clear") {
+                previewTask?.cancel()
+                exportTask?.cancel()
                 jobs.removeAll()
                 selectedJobID = nil
                 previewImage = nil
+                exportProgressText = ""
                 summaryText = ""
                 didInitializeCanvas = false
             }
@@ -97,6 +115,11 @@ struct ContentView: View {
             }
             .keyboardShortcut(.defaultAction)
             .disabled(!canExport)
+
+            Button("Cancel") {
+                exportTask?.cancel()
+            }
+            .disabled(!isExporting)
         }
         .padding(16)
     }
@@ -171,14 +194,35 @@ struct ContentView: View {
 
     private func refreshPreview() {
         guard let job = selectedJob, let canvasSize = currentCanvasSize, let padding = currentPadding else {
+            previewTask?.cancel()
             previewImage = nil
             return
         }
-        do {
-            let processed = try processor.processImage(at: job.sourceURL, canvasSize: canvasSize, padding: padding)
-            previewImage = NSImage(data: processed.data)
-        } catch {
-            previewImage = nil
+
+        previewTask?.cancel()
+        let processor = processor
+        let maxPixelDimension = previewMaxPixelDimension
+        previewTask = Task {
+            do {
+                try await Task.sleep(for: .milliseconds(75))
+                try Task.checkCancellation()
+                let preview = try await Task.detached(priority: .userInitiated) {
+                    try processor.previewImage(
+                        at: job.sourceURL,
+                        canvasSize: canvasSize,
+                        padding: padding,
+                        maxPixelDimension: maxPixelDimension
+                    )
+                }.value
+                try Task.checkCancellation()
+                previewImage = NSImage(
+                    cgImage: preview.cgImage,
+                    size: NSSize(width: preview.pixelWidth, height: preview.pixelHeight)
+                )
+            } catch is CancellationError {
+            } catch {
+                previewImage = nil
+            }
         }
     }
 
@@ -188,34 +232,56 @@ struct ContentView: View {
               let folderURL = FileSelection.selectExportFolder() else {
             return
         }
+        exportTask?.cancel()
         isExporting = true
         summaryText = ""
+        exportProgressText = "Preparing export..."
 
-        var exported = 0
-        var failed = 0
-        for index in jobs.indices {
-            do {
-                let processed = try processor.processImage(
-                    at: jobs[index].sourceURL,
-                    canvasSize: canvasSize,
-                    padding: padding
-                )
-                let destination = ExportFileNamer.destinationURL(
-                    for: jobs[index].sourceURL,
-                    format: processed.format,
-                    in: folderURL
-                )
-                try processed.data.write(to: destination, options: .atomic)
-                jobs[index].status = .exported(destination)
-                exported += 1
-            } catch {
-                jobs[index].status = .failed(error.localizedDescription)
-                failed += 1
+        let processor = processor
+        let jobCount = jobs.count
+        exportTask = Task {
+            var exported = 0
+            var failed = 0
+
+            for index in jobs.indices {
+                if Task.isCancelled {
+                    break
+                }
+
+                exportProgressText = "Exporting \(index + 1) of \(jobCount)..."
+                let sourceURL = jobs[index].sourceURL
+                do {
+                    let destination = try await Task.detached(priority: .userInitiated) {
+                        let processed = try processor.processImage(
+                            at: sourceURL,
+                            canvasSize: canvasSize,
+                            padding: padding
+                        )
+                        let destination = ExportFileNamer.destinationURL(
+                            for: sourceURL,
+                            format: processed.format,
+                            in: folderURL
+                        )
+                        try processed.data.write(to: destination, options: .atomic)
+                        return destination
+                    }.value
+                    jobs[index].status = .exported(destination)
+                    exported += 1
+                } catch is CancellationError {
+                    break
+                } catch {
+                    jobs[index].status = .failed(error.localizedDescription)
+                    failed += 1
+                }
             }
-        }
 
-        isExporting = false
-        summaryText = "Exported \(exported). Failed \(failed)."
+            isExporting = false
+            exportProgressText = ""
+            summaryText = Task.isCancelled
+                ? "Export canceled. Exported \(exported). Failed \(failed)."
+                : "Exported \(exported). Failed \(failed)."
+            exportTask = nil
+        }
     }
 
     private func paddingValue(from text: String) -> Int? {

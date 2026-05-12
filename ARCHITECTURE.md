@@ -13,7 +13,7 @@ There is no server, database, authentication, background daemon, network integra
 - `ImageCentererTestRunner`: executable behavior test runner.
 - `ImageCentererCoreTests`: placeholder SwiftPM test target.
 
-The app target depends on `ImageCentererCore`. The core target does not depend on SwiftUI.
+The app target depends on `ImageCentererCore`. The core target does not depend on SwiftUI or AppKit.
 
 ## Design Philosophy
 
@@ -111,9 +111,18 @@ Preview is recomputed in `ContentView.refreshPreview()` whenever any of these ch
 - padding X
 - padding Y
 
-If the canvas or padding values are invalid, preview is cleared. If processing succeeds, the returned encoded image data is loaded into `NSImage` and displayed with SwiftUI `Image(nsImage:)`.
+If the canvas or padding values are invalid, preview is cleared. If processing succeeds, the returned preview `CGImage` is wrapped in `NSImage` and displayed with SwiftUI `Image(nsImage:)`.
 
-The preview uses the same `processImage` method as export, so preview and exported files share the same rendering path.
+Preview uses `ImageCenteringProcessor.previewImage(...)`, not the export-grade `processImage(...)` path. This keeps live preview responsive while typing:
+
+- each new preview request cancels the previous preview task
+- preview work is lightly debounced
+- processing runs in a detached user-initiated task
+- the preview canvas is capped to a maximum pixel dimension
+- ImageIO creates a thumbnail-sized source image when possible
+- the preview skips final PNG/JPEG encoding
+
+Preview and export still share the same placement math and white-canvas rendering behavior. Export remains the source of truth for final output dimensions and encoding.
 
 ### Export
 
@@ -121,14 +130,16 @@ The preview uses the same `processImage` method as export, so preview and export
 
 1. Validates current canvas and padding.
 2. Opens a folder picker through `FileSelection.selectExportFolder()`.
-3. Iterates over `jobs.indices`.
-4. Calls `processor.processImage(...)` for each job independently.
-5. Resolves the destination URL with `ExportFileNamer.destinationURL(...)`.
-6. Writes encoded data atomically.
-7. Updates the job status to `.exported(destination)` or `.failed(error.localizedDescription)`.
-8. Shows a summary string: `Exported N. Failed M.`
+3. Starts an export `Task`.
+4. Iterates over `jobs.indices`.
+5. Updates progress text before each item.
+6. Calls `processor.processImage(...)` for each job independently in a detached user-initiated task.
+7. Resolves the destination URL with `ExportFileNamer.destinationURL(...)`.
+8. Writes encoded data atomically.
+9. Updates the job status to `.exported(destination)` or `.failed(error.localizedDescription)`.
+10. Shows a summary string: `Exported N. Failed M.` or `Export canceled. Exported N. Failed M.`
 
-The batch continues after individual file failures.
+The batch continues after individual file failures. Canceling export stops the loop before starting another item; it does not delete files that were already written.
 
 ## Models And State
 
@@ -146,6 +157,9 @@ Runtime state lives in SwiftUI `@State` properties in `ContentView`:
 - `previewImage: NSImage?`
 - `isExporting: Bool`
 - `summaryText: String`
+- `previewTask: Task<Void, Never>?`
+- `exportTask: Task<Void, Never>?`
+- `exportProgressText: String`
 
 `ImageJob` exists only for UI bookkeeping:
 
@@ -235,6 +249,7 @@ public struct CanvasSize
 public struct CanvasPadding
 public enum ImageFormat
 public struct ProcessedImage
+public struct PreviewImage
 public protocol ImageCenteringProcessing
 public struct ImageCenteringProcessor
 public enum ExportFileNamer
@@ -244,6 +259,12 @@ The main public processing call is:
 
 ```swift
 processImage(at:canvasSize:padding:) throws -> ProcessedImage
+```
+
+The preview processing call is:
+
+```swift
+previewImage(at:canvasSize:padding:maxPixelDimension:) throws -> PreviewImage
 ```
 
 ## Failure Handling

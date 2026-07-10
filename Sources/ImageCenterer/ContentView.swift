@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var canvasHeight = ""
     @State private var paddingX = ""
     @State private var paddingY = ""
+    @State private var isTransparentBackground = false
     @State private var didInitializeCanvas = false
     @State private var previewImage: NSImage?
     @State private var isExporting = false
@@ -67,6 +68,7 @@ struct ContentView: View {
         .onChange(of: canvasHeight) { _, _ in refreshPreview() }
         .onChange(of: paddingX) { _, _ in refreshPreview() }
         .onChange(of: paddingY) { _, _ in refreshPreview() }
+        .onChange(of: isTransparentBackground) { _, _ in refreshPreview() }
         .onDisappear {
             previewTask?.cancel()
             exportTask?.cancel()
@@ -110,6 +112,12 @@ struct ContentView: View {
                 .frame(width: 72)
                 .textFieldStyle(.roundedBorder)
 
+            Text("Transp.")
+                .foregroundStyle(.secondary)
+            Toggle("Transp.", isOn: $isTransparentBackground)
+                .toggleStyle(.switch)
+                .labelsHidden()
+
             Button("Export") {
                 exportImages()
             }
@@ -132,12 +140,34 @@ struct ContentView: View {
                     .resizable()
                     .interpolation(.none)
                     .scaledToFit()
+                    .background {
+                        if isTransparentBackground {
+                            checkerboard
+                        }
+                    }
                     .padding(24)
             } else {
                 Text(jobs.isEmpty ? "Add JPG or PNG images" : "Enter a valid canvas size and padding")
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var checkerboard: some View {
+        Canvas { context, size in
+            let square: CGFloat = 8
+            for row in 0..<Int((size.height / square).rounded(.up)) {
+                for column in 0..<Int((size.width / square).rounded(.up)) where (row + column) % 2 == 0 {
+                    let rect = CGRect(x: CGFloat(column) * square, y: CGFloat(row) * square, width: square, height: square)
+                    context.fill(Path(rect), with: .color(Color(nsColor: .quaternaryLabelColor)))
+                }
+            }
+        }
+        .background(Color(nsColor: .textBackgroundColor))
+    }
+
+    private var background: CanvasBackground {
+        isTransparentBackground ? .transparent : .white
     }
 
     private var selectedJob: ImageJob? {
@@ -202,6 +232,7 @@ struct ContentView: View {
         previewTask?.cancel()
         let processor = processor
         let maxPixelDimension = previewMaxPixelDimension
+        let background = background
         previewTask = Task {
             do {
                 try await Task.sleep(for: .milliseconds(75))
@@ -211,6 +242,7 @@ struct ContentView: View {
                         at: job.sourceURL,
                         canvasSize: canvasSize,
                         padding: padding,
+                        background: background,
                         maxPixelDimension: maxPixelDimension
                     )
                 }.value
@@ -239,6 +271,7 @@ struct ContentView: View {
 
         let processor = processor
         let jobCount = jobs.count
+        let background = background
         exportTask = Task {
             var exported = 0
             var failed = 0
@@ -255,7 +288,8 @@ struct ContentView: View {
                         let processed = try processor.processImage(
                             at: sourceURL,
                             canvasSize: canvasSize,
-                            padding: padding
+                            padding: padding,
+                            background: background
                         )
                         let destination = ExportFileNamer.destinationURL(
                             for: sourceURL,

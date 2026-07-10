@@ -14,6 +14,8 @@ struct ImageCentererTestRunner {
         try tests.sameSizeCanvasDoesNotAddBorder()
         try tests.largerImageIsScaledDownToFit()
         try tests.transparentPNGFlattensOverWhite()
+        try tests.transparentBackgroundKeepsCanvasTransparent()
+        try tests.transparentBackgroundExportsJPEGAsPNG()
         try tests.unsupportedFileThrows()
         try tests.differentSizedImagesAreProcessedIndependently()
         try tests.exportFileNamerKeepsOriginalNamesAndIncrementsConflicts()
@@ -156,6 +158,48 @@ private struct ProcessorTests {
             let decoded = try decodePixels(from: result.data)
 
             try expect(decoded.colorAt(x: 0, y: 0) == .white, "Transparent source pixels should flatten over white.")
+        }
+    }
+
+    func transparentBackgroundKeepsCanvasTransparent() throws {
+        try withTemporaryDirectory { directory in
+            let sourceURL = directory.appendingPathComponent("small.png")
+            try writeImage(width: 2, height: 2, pixels: Array(repeating: .red, count: 4), format: .png, to: sourceURL)
+
+            let result = try ImageCenteringProcessor().processImage(
+                at: sourceURL,
+                canvasSize: try CanvasSize(width: 6, height: 6),
+                background: .transparent
+            )
+            let decoded = try decodePixels(from: result.data)
+
+            try expect(result.format == .png, "Transparent output should be PNG.")
+            try expect(decoded.colorAt(x: 0, y: 0) == .clear, "Canvas margin should stay fully transparent.")
+            try expect(decoded.colorAt(x: 5, y: 5) == .clear, "Canvas margin should stay fully transparent.")
+            try expect(decoded.colorAt(x: 2, y: 2) == .red, "Image pixels should stay opaque on a transparent canvas.")
+            try expect(decoded.colorAt(x: 3, y: 3) == .red, "Image pixels should stay opaque on a transparent canvas.")
+        }
+    }
+
+    func transparentBackgroundExportsJPEGAsPNG() throws {
+        try withTemporaryDirectory { directory in
+            let sourceURL = directory.appendingPathComponent("photo.jpg")
+            try writeImage(width: 2, height: 2, pixels: Array(repeating: .blue, count: 4), format: .jpeg(preferredExtension: "jpg"), to: sourceURL)
+
+            let result = try ImageCenteringProcessor().processImage(
+                at: sourceURL,
+                canvasSize: try CanvasSize(width: 4, height: 4),
+                background: .transparent
+            )
+            let decoded = try decodePixels(from: result.data)
+
+            try expect(result.format == .png, "JPEG input with transparent background should convert to PNG.")
+            try expect(decoded.colorAt(x: 0, y: 0) == .clear, "Converted JPEG margin should be transparent.")
+            try expect(decoded.colorAt(x: 2, y: 2).isClose(to: .blue), "Converted JPEG should keep its image pixels.")
+
+            let folder = URL(fileURLWithPath: "/exports", isDirectory: true)
+            let destination = ExportFileNamer.destinationURL(for: sourceURL, format: result.format, in: folder) { _ in false }
+            try expect(destination.lastPathComponent == "photo.png", "Converted JPEG should export with a .png extension.")
         }
     }
 

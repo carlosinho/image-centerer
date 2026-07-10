@@ -23,17 +23,17 @@ For each selected image, Image Centerer creates a new output image with the requ
 
 The processing rules are:
 
-- Output canvas is filled with solid white.
+- Output canvas is filled with solid white or kept transparent, per the background toggle in the top bar.
 - Supported inputs are `.png`, `.jpg`, and `.jpeg`.
-- Output format follows the input format family.
+- Output format follows the input format family, except in transparent mode, where every output is PNG (JPEG cannot store transparency).
 - The original filename is preserved on export.
 - If the destination filename already exists, the app writes `name 2.ext`, `name 3.ext`, and so on.
 - Each input image is processed independently, so mixed source dimensions are valid in the same batch.
 - The image is centered on the canvas.
-- Padding X/Y is treated as extra white space around the image before fitting.
+- Padding X/Y is treated as extra background space around the image before fitting.
 - Images are scaled down when the padded image would exceed the canvas.
 - Images are never scaled up.
-- Transparent PNG pixels are flattened against the white canvas.
+- Transparent PNG pixels are flattened against the canvas in white mode and preserved in transparent mode.
 
 Example export names:
 
@@ -59,10 +59,11 @@ If macOS blocks the app because it was downloaded from the internet, right-click
 3. The canvas width and height are initialized from the first successfully loaded image.
 4. Edit canvas width/height if needed.
 5. Optionally set X and Y padding.
-6. Select an image in the sidebar to preview its processed result.
-7. Click **Export**.
-8. Choose an output folder.
-9. The app processes every selected image, shows progress, and then shows exported/failed counts.
+6. Optionally turn on the **Transp.** toggle to keep the background transparent instead of white. The preview shows a checkerboard behind transparent areas.
+7. Select an image in the sidebar to preview its processed result.
+8. Click **Export**.
+9. Choose an output folder.
+10. The app processes every selected image, shows progress, and then shows exported/failed counts.
 
 Preview updates live as the selected image, canvas size, or padding changes. Preview rendering is optimized for interactivity: the app cancels stale preview work while you type and renders a capped preview bitmap instead of running the full export encoder on every keystroke.
 
@@ -151,6 +152,8 @@ swift run ImageCentererTestRunner
 - padding is applied before fitting
 - JPEG output stays JPEG
 - transparent PNGs flatten over white
+- transparent background keeps canvas pixels fully transparent
+- transparent background converts JPEG output to PNG
 - unsupported extensions fail
 - differently sized images are processed independently
 - export naming preserves original names and increments conflicts

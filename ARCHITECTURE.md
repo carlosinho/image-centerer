@@ -17,11 +17,12 @@ The app target depends on `ImageCentererCore`. The core target does not depend o
 
 ## Design Philosophy
 
-The core rule is that output should be predictable from four inputs:
+The core rule is that output should be predictable from five inputs:
 
 - source file URL
 - output canvas width/height
 - X/Y padding
+- canvas background (white or transparent)
 - source file format
 
 The UI is thin and stateful. The processor is stateless and does not remember previous jobs. This keeps batch behavior simple: every selected image is processed independently through the same processor call.
@@ -30,7 +31,7 @@ The app favors local platform APIs over dependencies:
 
 - `NSOpenPanel` for file/folder selection
 - `CGImageSource` for decoding and metadata
-- `CGContext` for white canvas rendering
+- `CGContext` for canvas rendering
 - `CGImageDestination` for PNG/JPEG output
 - `UTType.png` and `UTType.jpeg` for output encoding identifiers
 
@@ -43,11 +44,12 @@ Implemented invariants in `ImageCenteringProcessor`:
 - Padding X and Y must be zero or positive.
 - Supported extensions are exactly `png`, `jpg`, and `jpeg`, case-insensitive through `lowercased()`.
 - Output dimensions always equal the requested `CanvasSize`.
-- Output background is white.
+- Output background is white or fully transparent, per the requested `CanvasBackground`.
+- With a transparent background, output format is always PNG regardless of input format, because JPEG cannot store alpha.
 - Images are never scaled up.
 - Images are scaled down if the image plus padding would exceed the canvas.
-- Padding participates in fitting but is not drawn as a separate object; it appears as white canvas area around the drawn image.
-- PNG alpha is flattened by drawing onto the white canvas.
+- Padding participates in fitting but is not drawn as a separate object; it appears as background canvas area around the drawn image.
+- With a white background, PNG alpha is flattened by drawing onto the white canvas; with a transparent background, source alpha is preserved.
 - JPEG output uses lossy compression quality `0.95`.
 - The first frame/image from `CGImageSource` is used.
 - Metadata preservation is not implemented.
@@ -110,6 +112,7 @@ Preview is recomputed in `ContentView.refreshPreview()` whenever any of these ch
 - canvas height
 - padding X
 - padding Y
+- background selection
 
 If the canvas or padding values are invalid, preview is cleared. If processing succeeds, the returned preview `CGImage` is wrapped in `NSImage` and displayed with SwiftUI `Image(nsImage:)`.
 
@@ -122,7 +125,9 @@ Preview uses `ImageCenteringProcessor.previewImage(...)`, not the export-grade `
 - ImageIO creates a thumbnail-sized source image when possible
 - the preview skips final PNG/JPEG encoding
 
-Preview and export still share the same placement math and white-canvas rendering behavior. Export remains the source of truth for final output dimensions and encoding.
+Preview and export still share the same placement math and canvas rendering behavior. Export remains the source of truth for final output dimensions and encoding.
+
+When the transparent background is selected, the preview draws a checkerboard pattern behind the image so transparent areas are visible.
 
 ### Export
 
@@ -153,6 +158,7 @@ Runtime state lives in SwiftUI `@State` properties in `ContentView`:
 - `canvasHeight: String`
 - `paddingX: String`
 - `paddingY: String`
+- `isTransparentBackground: Bool`
 - `didInitializeCanvas: Bool`
 - `previewImage: NSImage?`
 - `isExporting: Bool`
@@ -205,6 +211,8 @@ The output extension comes from the detected format:
 - JPG stays `.jpg`
 - JPEG stays `.jpeg`
 
+Exception: with a transparent background, the output format is forced to PNG, so `.jpg` and `.jpeg` inputs export as `.png`.
+
 `ExportFileNamer.destinationURL(...)` preserves the original basename:
 
 ```text
@@ -247,6 +255,7 @@ The closest thing to an internal API is the core target:
 ```swift
 public struct CanvasSize
 public struct CanvasPadding
+public enum CanvasBackground
 public enum ImageFormat
 public struct ProcessedImage
 public struct PreviewImage
@@ -258,13 +267,13 @@ public enum ExportFileNamer
 The main public processing call is:
 
 ```swift
-processImage(at:canvasSize:padding:) throws -> ProcessedImage
+processImage(at:canvasSize:padding:background:) throws -> ProcessedImage
 ```
 
 The preview processing call is:
 
 ```swift
-previewImage(at:canvasSize:padding:maxPixelDimension:) throws -> PreviewImage
+previewImage(at:canvasSize:padding:background:maxPixelDimension:) throws -> PreviewImage
 ```
 
 ## Failure Handling

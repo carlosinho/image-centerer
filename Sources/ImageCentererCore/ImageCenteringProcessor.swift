@@ -29,6 +29,11 @@ public struct CanvasPadding: Equatable, Sendable {
     }
 }
 
+public enum CanvasBackground: Equatable, Sendable {
+    case white
+    case transparent
+}
+
 public enum ImageFormat: Equatable, Sendable {
     case png
     case jpeg(preferredExtension: String)
@@ -66,7 +71,12 @@ public struct PreviewImage: Sendable {
 }
 
 public protocol ImageCenteringProcessing: Sendable {
-    func processImage(at sourceURL: URL, canvasSize: CanvasSize, padding: CanvasPadding) throws -> ProcessedImage
+    func processImage(
+        at sourceURL: URL,
+        canvasSize: CanvasSize,
+        padding: CanvasPadding,
+        background: CanvasBackground
+    ) throws -> ProcessedImage
 }
 
 public enum ImageProcessingError: LocalizedError {
@@ -108,9 +118,12 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing, Sendable {
     public func processImage(
         at sourceURL: URL,
         canvasSize: CanvasSize,
-        padding: CanvasPadding = try! CanvasPadding()
+        padding: CanvasPadding = try! CanvasPadding(),
+        background: CanvasBackground = .white
     ) throws -> ProcessedImage {
-        let format = try ImageFormat.detect(from: sourceURL)
+        let detectedFormat = try ImageFormat.detect(from: sourceURL)
+        // JPEG cannot store alpha, so transparent output is always PNG.
+        let format: ImageFormat = background == .transparent ? .png : detectedFormat
         guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil) else {
             throw ImageProcessingError.decodeFailed
         }
@@ -120,7 +133,7 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing, Sendable {
             throw ImageProcessingError.decodeFailed
         }
 
-        let rendered = try render(sourceImage, canvasSize: canvasSize, padding: padding)
+        let rendered = try render(sourceImage, canvasSize: canvasSize, padding: padding, background: background)
         let data = try encode(rendered, format: format)
         return ProcessedImage(
             data: data,
@@ -134,6 +147,7 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing, Sendable {
         at sourceURL: URL,
         canvasSize: CanvasSize,
         padding: CanvasPadding = try! CanvasPadding(),
+        background: CanvasBackground = .white,
         maxPixelDimension: Int = 1400
     ) throws -> PreviewImage {
         guard maxPixelDimension > 0 else {
@@ -160,7 +174,7 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing, Sendable {
             throw ImageProcessingError.decodeFailed
         }
 
-        let rendered = try render(sourceImage, canvasSize: previewCanvasSize, padding: previewPadding)
+        let rendered = try render(sourceImage, canvasSize: previewCanvasSize, padding: previewPadding, background: background)
         return PreviewImage(
             cgImage: rendered,
             pixelWidth: previewCanvasSize.width,
@@ -179,7 +193,12 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing, Sendable {
         return (format, width, height)
     }
 
-    private func render(_ sourceImage: CGImage, canvasSize: CanvasSize, padding: CanvasPadding) throws -> CGImage {
+    private func render(
+        _ sourceImage: CGImage,
+        canvasSize: CanvasSize,
+        padding: CanvasPadding,
+        background: CanvasBackground
+    ) throws -> CGImage {
         let width = canvasSize.width
         let height = canvasSize.height
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
@@ -195,8 +214,14 @@ public struct ImageCenteringProcessor: ImageCenteringProcessing, Sendable {
             throw ImageProcessingError.cannotCreateContext
         }
 
-        context.setFillColor(CGColor(gray: 1, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let canvasRect = CGRect(x: 0, y: 0, width: width, height: height)
+        switch background {
+        case .white:
+            context.setFillColor(CGColor(gray: 1, alpha: 1))
+            context.fill(canvasRect)
+        case .transparent:
+            context.clear(canvasRect)
+        }
         context.interpolationQuality = .high
 
         let drawRect = Placement(

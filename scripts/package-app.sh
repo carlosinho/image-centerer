@@ -5,7 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="Image Centerer"
 PRODUCT_NAME="ImageCenterer"
 BUNDLE_ID="com.local.image-centerer"
-VERSION="${1:-0.1.0}"
+# Version comes from the first argument, else the VERSION file at the repo root.
+VERSION="${1:-$(tr -d '[:space:]' < "$ROOT_DIR/VERSION" 2>/dev/null || echo "0.0.0-dev")}"
 
 DIST_DIR="$ROOT_DIR/dist"
 APP_DIR="$DIST_DIR/$APP_NAME.app"

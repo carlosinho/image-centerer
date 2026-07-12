@@ -2,29 +2,10 @@ import CoreGraphics
 import Foundation
 import ImageCentererCore
 import ImageIO
+import Testing
 
-@main
-struct ImageCentererTestRunner {
-    static func main() throws {
-        let tests = ProcessorTests()
-        try tests.pngSmallerThanCanvasIsNotScaledUp()
-        try tests.mixedOverflowImageIsScaledToFit()
-        try tests.paddingIsAppliedBeforeFit()
-        try tests.jpegOutputKeepsJPEGFormatAndCanvasSize()
-        try tests.sameSizeCanvasDoesNotAddBorder()
-        try tests.largerImageIsScaledDownToFit()
-        try tests.transparentPNGFlattensOverWhite()
-        try tests.transparentBackgroundKeepsCanvasTransparent()
-        try tests.transparentBackgroundExportsJPEGAsPNG()
-        try tests.unsupportedFileThrows()
-        try tests.differentSizedImagesAreProcessedIndependently()
-        try tests.exportFileNamerKeepsOriginalNamesAndIncrementsConflicts()
-        print("All ImageCenterer tests passed.")
-    }
-}
-
-private struct ProcessorTests {
-    func pngSmallerThanCanvasIsNotScaledUp() throws {
+struct ImageCenteringProcessorTests {
+    @Test func pngSmallerThanCanvasIsNotScaledUp() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("small.png")
             try writeImage(width: 2, height: 2, pixels: Array(repeating: .red, count: 4), format: .png, to: sourceURL)
@@ -35,17 +16,17 @@ private struct ProcessorTests {
             )
             let decoded = try decodePixels(from: result.data)
 
-            try expect(result.format == .png, "PNG input should produce PNG output.")
-            try expect(result.pixelWidth == 6, "Output width should match the canvas.")
-            try expect(result.pixelHeight == 6, "Output height should match the canvas.")
-            try expect(decoded.colorAt(x: 0, y: 0).isClose(to: .white), "Smaller image should not scale up.")
-            try expect(decoded.colorAt(x: 5, y: 5).isClose(to: .white), "Smaller image should not scale up.")
-            try expect(decoded.colorAt(x: 2, y: 2).isClose(to: .red), "Smaller image should stay centered at original size.")
-            try expect(decoded.colorAt(x: 3, y: 3).isClose(to: .red), "Smaller image should stay centered at original size.")
+            #expect(result.format == .png, "PNG input should produce PNG output.")
+            #expect(result.pixelWidth == 6, "Output width should match the canvas.")
+            #expect(result.pixelHeight == 6, "Output height should match the canvas.")
+            #expect(decoded.colorAt(x: 0, y: 0).isClose(to: .white), "Smaller image should not scale up.")
+            #expect(decoded.colorAt(x: 5, y: 5).isClose(to: .white), "Smaller image should not scale up.")
+            #expect(decoded.colorAt(x: 2, y: 2).isClose(to: .red), "Smaller image should stay centered at original size.")
+            #expect(decoded.colorAt(x: 3, y: 3).isClose(to: .red), "Smaller image should stay centered at original size.")
         }
     }
 
-    func mixedOverflowImageIsScaledToFit() throws {
+    @Test func mixedOverflowImageIsScaledToFit() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("mixed.png")
             try writeImage(
@@ -62,18 +43,18 @@ private struct ProcessorTests {
             )
             let decoded = try decodePixels(from: result.data)
 
-            try expect(result.pixelWidth == 1280, "Output width should match the canvas.")
-            try expect(result.pixelHeight == 720, "Output height should match the canvas.")
-            try expect(decoded.colorAt(x: 200, y: 360).isClose(to: .white), "Scaled image should leave horizontal white margin.")
-            try expect(decoded.colorAt(x: 260, y: 360).isClose(to: .red), "Scaled image should occupy the centered interior.")
-            try expect(decoded.colorAt(x: 1020, y: 360).isClose(to: .red), "Scaled image should occupy the centered interior.")
-            try expect(decoded.colorAt(x: 1100, y: 360).isClose(to: .white), "Scaled image should leave horizontal white margin.")
-            try expect(decoded.colorAt(x: 640, y: 0).isClose(to: .red), "Scaled image should fill canvas height.")
-            try expect(decoded.colorAt(x: 640, y: 719).isClose(to: .red), "Scaled image should fill canvas height.")
+            #expect(result.pixelWidth == 1280, "Output width should match the canvas.")
+            #expect(result.pixelHeight == 720, "Output height should match the canvas.")
+            #expect(decoded.colorAt(x: 200, y: 360).isClose(to: .white), "Scaled image should leave horizontal white margin.")
+            #expect(decoded.colorAt(x: 260, y: 360).isClose(to: .red), "Scaled image should occupy the centered interior.")
+            #expect(decoded.colorAt(x: 1020, y: 360).isClose(to: .red), "Scaled image should occupy the centered interior.")
+            #expect(decoded.colorAt(x: 1100, y: 360).isClose(to: .white), "Scaled image should leave horizontal white margin.")
+            #expect(decoded.colorAt(x: 640, y: 0).isClose(to: .red), "Scaled image should fill canvas height.")
+            #expect(decoded.colorAt(x: 640, y: 719).isClose(to: .red), "Scaled image should fill canvas height.")
         }
     }
 
-    func paddingIsAppliedBeforeFit() throws {
+    @Test func paddingIsAppliedBeforeFit() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("padded.png")
             try writeImage(width: 100, height: 100, pixels: Array(repeating: .green, count: 10_000), format: .png, to: sourceURL)
@@ -85,16 +66,16 @@ private struct ProcessorTests {
             )
             let decoded = try decodePixels(from: result.data)
 
-            try expect(decoded.colorAt(x: 49, y: 100).isClose(to: .white), "X padding should remain white.")
-            try expect(decoded.colorAt(x: 50, y: 100).isClose(to: .green), "Image should start after X padding.")
-            try expect(decoded.colorAt(x: 149, y: 100).isClose(to: .green), "Image should end before right padding.")
-            try expect(decoded.colorAt(x: 150, y: 100).isClose(to: .white), "Right X padding should remain white.")
-            try expect(decoded.colorAt(x: 100, y: 49).isClose(to: .white), "Y padding should remain white.")
-            try expect(decoded.colorAt(x: 100, y: 50).isClose(to: .green), "Image should start after Y padding.")
+            #expect(decoded.colorAt(x: 49, y: 100).isClose(to: .white), "X padding should remain white.")
+            #expect(decoded.colorAt(x: 50, y: 100).isClose(to: .green), "Image should start after X padding.")
+            #expect(decoded.colorAt(x: 149, y: 100).isClose(to: .green), "Image should end before right padding.")
+            #expect(decoded.colorAt(x: 150, y: 100).isClose(to: .white), "Right X padding should remain white.")
+            #expect(decoded.colorAt(x: 100, y: 49).isClose(to: .white), "Y padding should remain white.")
+            #expect(decoded.colorAt(x: 100, y: 50).isClose(to: .green), "Image should start after Y padding.")
         }
     }
 
-    func jpegOutputKeepsJPEGFormatAndCanvasSize() throws {
+    @Test func jpegOutputKeepsJPEGFormatAndCanvasSize() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("photo.jpeg")
             try writeImage(width: 3, height: 3, pixels: Array(repeating: .blue, count: 9), format: .jpeg(preferredExtension: "jpeg"), to: sourceURL)
@@ -104,14 +85,14 @@ private struct ProcessorTests {
                 canvasSize: try CanvasSize(width: 7, height: 5)
             )
 
-            try expect(result.format == .jpeg(preferredExtension: "jpeg"), "JPEG extension family should be preserved.")
-            try expect(result.pixelWidth == 7, "JPEG output width should match the canvas.")
-            try expect(result.pixelHeight == 5, "JPEG output height should match the canvas.")
-            try expect(!result.data.isEmpty, "JPEG output should contain encoded data.")
+            #expect(result.format == .jpeg(preferredExtension: "jpeg"), "JPEG extension family should be preserved.")
+            #expect(result.pixelWidth == 7, "JPEG output width should match the canvas.")
+            #expect(result.pixelHeight == 5, "JPEG output height should match the canvas.")
+            #expect(!result.data.isEmpty, "JPEG output should contain encoded data.")
         }
     }
 
-    func sameSizeCanvasDoesNotAddBorder() throws {
+    @Test func sameSizeCanvasDoesNotAddBorder() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("same.png")
             try writeImage(width: 2, height: 2, pixels: Array(repeating: .green, count: 4), format: .png, to: sourceURL)
@@ -122,12 +103,12 @@ private struct ProcessorTests {
             )
             let decoded = try decodePixels(from: result.data)
 
-            try expect(decoded.colorAt(x: 0, y: 0) == .green, "Same-size image should fill the canvas.")
-            try expect(decoded.colorAt(x: 1, y: 1) == .green, "Same-size image should fill the canvas.")
+            #expect(decoded.colorAt(x: 0, y: 0) == .green, "Same-size image should fill the canvas.")
+            #expect(decoded.colorAt(x: 1, y: 1) == .green, "Same-size image should fill the canvas.")
         }
     }
 
-    func largerImageIsScaledDownToFit() throws {
+    @Test func largerImageIsScaledDownToFit() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("large.png")
             try writeImage(width: 6, height: 2, pixels: Array(repeating: .red, count: 12), format: .png, to: sourceURL)
@@ -138,15 +119,15 @@ private struct ProcessorTests {
             )
             let decoded = try decodePixels(from: result.data)
 
-            try expect(result.pixelWidth == 3, "Output width should match the canvas.")
-            try expect(result.pixelHeight == 3, "Output height should match the canvas.")
-            try expect(decoded.colorAt(x: 1, y: 0).isClose(to: .white), "Scaled-down image should keep vertical margin.")
-            try expect(decoded.colorAt(x: 1, y: 1).isClose(to: .red), "Larger image should scale down into the canvas.")
-            try expect(decoded.colorAt(x: 1, y: 2).isClose(to: .white), "Scaled-down image should keep vertical margin.")
+            #expect(result.pixelWidth == 3, "Output width should match the canvas.")
+            #expect(result.pixelHeight == 3, "Output height should match the canvas.")
+            #expect(decoded.colorAt(x: 1, y: 0).isClose(to: .white), "Scaled-down image should keep vertical margin.")
+            #expect(decoded.colorAt(x: 1, y: 1).isClose(to: .red), "Larger image should scale down into the canvas.")
+            #expect(decoded.colorAt(x: 1, y: 2).isClose(to: .white), "Scaled-down image should keep vertical margin.")
         }
     }
 
-    func transparentPNGFlattensOverWhite() throws {
+    @Test func transparentPNGFlattensOverWhite() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("transparent.png")
             try writeImage(width: 1, height: 1, pixels: [.clear], format: .png, to: sourceURL)
@@ -157,11 +138,11 @@ private struct ProcessorTests {
             )
             let decoded = try decodePixels(from: result.data)
 
-            try expect(decoded.colorAt(x: 0, y: 0) == .white, "Transparent source pixels should flatten over white.")
+            #expect(decoded.colorAt(x: 0, y: 0) == .white, "Transparent source pixels should flatten over white.")
         }
     }
 
-    func transparentBackgroundKeepsCanvasTransparent() throws {
+    @Test func transparentBackgroundKeepsCanvasTransparent() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("small.png")
             try writeImage(width: 2, height: 2, pixels: Array(repeating: .red, count: 4), format: .png, to: sourceURL)
@@ -173,15 +154,15 @@ private struct ProcessorTests {
             )
             let decoded = try decodePixels(from: result.data)
 
-            try expect(result.format == .png, "Transparent output should be PNG.")
-            try expect(decoded.colorAt(x: 0, y: 0) == .clear, "Canvas margin should stay fully transparent.")
-            try expect(decoded.colorAt(x: 5, y: 5) == .clear, "Canvas margin should stay fully transparent.")
-            try expect(decoded.colorAt(x: 2, y: 2) == .red, "Image pixels should stay opaque on a transparent canvas.")
-            try expect(decoded.colorAt(x: 3, y: 3) == .red, "Image pixels should stay opaque on a transparent canvas.")
+            #expect(result.format == .png, "Transparent output should be PNG.")
+            #expect(decoded.colorAt(x: 0, y: 0) == .clear, "Canvas margin should stay fully transparent.")
+            #expect(decoded.colorAt(x: 5, y: 5) == .clear, "Canvas margin should stay fully transparent.")
+            #expect(decoded.colorAt(x: 2, y: 2) == .red, "Image pixels should stay opaque on a transparent canvas.")
+            #expect(decoded.colorAt(x: 3, y: 3) == .red, "Image pixels should stay opaque on a transparent canvas.")
         }
     }
 
-    func transparentBackgroundExportsJPEGAsPNG() throws {
+    @Test func transparentBackgroundExportsJPEGAsPNG() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("photo.jpg")
             try writeImage(width: 2, height: 2, pixels: Array(repeating: .blue, count: 4), format: .jpeg(preferredExtension: "jpg"), to: sourceURL)
@@ -193,33 +174,31 @@ private struct ProcessorTests {
             )
             let decoded = try decodePixels(from: result.data)
 
-            try expect(result.format == .png, "JPEG input with transparent background should convert to PNG.")
-            try expect(decoded.colorAt(x: 0, y: 0) == .clear, "Converted JPEG margin should be transparent.")
-            try expect(decoded.colorAt(x: 2, y: 2).isClose(to: .blue), "Converted JPEG should keep its image pixels.")
+            #expect(result.format == .png, "JPEG input with transparent background should convert to PNG.")
+            #expect(decoded.colorAt(x: 0, y: 0) == .clear, "Converted JPEG margin should be transparent.")
+            #expect(decoded.colorAt(x: 2, y: 2).isClose(to: .blue), "Converted JPEG should keep its image pixels.")
 
             let folder = URL(fileURLWithPath: "/exports", isDirectory: true)
             let destination = ExportFileNamer.destinationURL(for: sourceURL, format: result.format, in: folder) { _ in false }
-            try expect(destination.lastPathComponent == "photo.png", "Converted JPEG should export with a .png extension.")
+            #expect(destination.lastPathComponent == "photo.png", "Converted JPEG should export with a .png extension.")
         }
     }
 
-    func unsupportedFileThrows() throws {
+    @Test func unsupportedFileThrows() throws {
         try withTemporaryDirectory { directory in
             let sourceURL = directory.appendingPathComponent("not-image.txt")
             try Data("nope".utf8).write(to: sourceURL)
 
-            do {
+            #expect(throws: ImageProcessingError.unsupportedFileType) {
                 _ = try ImageCenteringProcessor().processImage(
                     at: sourceURL,
                     canvasSize: try CanvasSize(width: 10, height: 10)
                 )
-                throw TestFailure("Unsupported input should throw.")
-            } catch ImageProcessingError.unsupportedFileType {
             }
         }
     }
 
-    func differentSizedImagesAreProcessedIndependently() throws {
+    @Test func differentSizedImagesAreProcessedIndependently() throws {
         try withTemporaryDirectory { directory in
             let wideURL = directory.appendingPathComponent("wide.png")
             let tallURL = directory.appendingPathComponent("tall.png")
@@ -233,16 +212,16 @@ private struct ProcessorTests {
             let decodedWide = try decodePixels(from: wide.data)
             let decodedTall = try decodePixels(from: tall.data)
 
-            try expect(wide.pixelWidth == 6 && wide.pixelHeight == 6, "Wide image output should match the requested canvas.")
-            try expect(tall.pixelWidth == 6 && tall.pixelHeight == 6, "Tall image output should match the requested canvas.")
-            try expect(decodedWide.colorAt(x: 3, y: 1).isClose(to: .white), "Wide image should have independent vertical margins.")
-            try expect(decodedWide.colorAt(x: 3, y: 3).isClose(to: .red), "Wide image should be processed from its own dimensions.")
-            try expect(decodedTall.colorAt(x: 1, y: 3).isClose(to: .white), "Tall image should have independent horizontal margins.")
-            try expect(decodedTall.colorAt(x: 3, y: 3).isClose(to: .blue), "Tall image should be processed from its own dimensions.")
+            #expect(wide.pixelWidth == 6 && wide.pixelHeight == 6, "Wide image output should match the requested canvas.")
+            #expect(tall.pixelWidth == 6 && tall.pixelHeight == 6, "Tall image output should match the requested canvas.")
+            #expect(decodedWide.colorAt(x: 3, y: 1).isClose(to: .white), "Wide image should have independent vertical margins.")
+            #expect(decodedWide.colorAt(x: 3, y: 3).isClose(to: .red), "Wide image should be processed from its own dimensions.")
+            #expect(decodedTall.colorAt(x: 1, y: 3).isClose(to: .white), "Tall image should have independent horizontal margins.")
+            #expect(decodedTall.colorAt(x: 3, y: 3).isClose(to: .blue), "Tall image should be processed from its own dimensions.")
         }
     }
 
-    func exportFileNamerKeepsOriginalNamesAndIncrementsConflicts() throws {
+    @Test func exportFileNamerKeepsOriginalNamesAndIncrementsConflicts() {
         let folder = URL(fileURLWithPath: "/exports", isDirectory: true)
         let source = URL(fileURLWithPath: "/input/avatar.png")
         let occupied = Set([
@@ -254,7 +233,7 @@ private struct ProcessorTests {
             occupied.contains($0.path)
         }
 
-        try expect(destination.path == "/exports/avatar 3.png", "Original names should be preserved and conflicts should increment.")
+        #expect(destination.path == "/exports/avatar 3.png", "Original names should be preserved and conflicts should increment.")
     }
 
     private func withTemporaryDirectory(_ body: (URL) throws -> Void) throws {
@@ -266,7 +245,7 @@ private struct ProcessorTests {
     }
 
     private func writeImage(width: Int, height: Int, pixels: [TestColor], format: ImageFormat, to url: URL) throws {
-        try expect(pixels.count == width * height, "Fixture pixel count must match dimensions.")
+        try #require(pixels.count == width * height, "Fixture pixel count must match dimensions.")
         var bytes = pixels.flatMap(\.rgba)
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(
@@ -280,16 +259,16 @@ private struct ProcessorTests {
               ),
               let image = context.makeImage(),
               let destination = CGImageDestinationCreateWithURL(url as CFURL, format.utType.identifier as CFString, 1, nil) else {
-            throw TestFailure("Could not create fixture image.")
+            throw FixtureFailure("Could not create fixture image.")
         }
         CGImageDestinationAddImage(destination, image, nil)
-        try expect(CGImageDestinationFinalize(destination), "Fixture image should be written.")
+        try #require(CGImageDestinationFinalize(destination), "Fixture image should be written.")
     }
 
     private func decodePixels(from data: Data) throws -> DecodedPixels {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-            throw TestFailure("Could not decode processed image.")
+            throw FixtureFailure("Could not decode processed image.")
         }
         let width = image.width
         let height = image.height
@@ -304,16 +283,10 @@ private struct ProcessorTests {
                 space: colorSpace,
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
               ) else {
-            throw TestFailure("Could not create decode context.")
+            throw FixtureFailure("Could not create decode context.")
         }
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
         return DecodedPixels(width: width, height: height, bytes: bytes)
-    }
-
-    private func expect(_ condition: Bool, _ message: String) throws {
-        if !condition {
-            throw TestFailure(message)
-        }
     }
 }
 
@@ -356,7 +329,7 @@ private struct TestColor: Equatable {
     }
 }
 
-private struct TestFailure: Error, CustomStringConvertible {
+private struct FixtureFailure: Error, CustomStringConvertible {
     let description: String
 
     init(_ description: String) {

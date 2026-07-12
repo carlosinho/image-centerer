@@ -16,10 +16,6 @@ let package = Package(
             name: "ImageCenterer",
             dependencies: ["ImageCentererCore"]
         ),
-        .executableTarget(
-            name: "ImageCentererTestRunner",
-            dependencies: ["ImageCentererCore"],
-        ),
         .testTarget(
             name: "ImageCentererCoreTests",
             dependencies: ["ImageCentererCore"]

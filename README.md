@@ -46,11 +46,19 @@ avatar.png already exists:
 avatar.png   -> avatar 2.png
 ```
 
-## Download And Run
+## Build It Yourself
 
-Download the latest `Image-Centerer-macOS-*.zip` from GitHub Releases, unzip it, and open `Image Centerer.app`.
+Image Centerer is distributed as source only — there is no prebuilt binary to download. Build the app locally:
 
-If macOS blocks the app because it was downloaded from the internet, right-click the app and choose **Open**. This project does not use Developer ID signing or notarization.
+```sh
+git clone https://github.com/carlosinho/image-centerer.git
+cd image-centerer
+./scripts/package-app.sh
+```
+
+The finished app is written to `dist/Image Centerer.app`. Move it to `/Applications` or run it from `dist/` directly.
+
+Because you compiled the app on your own machine, macOS Gatekeeper does not quarantine it: there is no "unidentified developer" warning and no right-click-to-open workaround. Quarantine only applies to files downloaded from the internet, so building from source avoids the problem entirely without Developer ID signing or notarization.
 
 ## Main User Flow
 
@@ -79,6 +87,7 @@ The app currently uses standard file picker dialogs. It does not implement drag-
 - AppKit `NSOpenPanel` for input/export folder selection and `NSImage` display in the app target
 - CoreGraphics and ImageIO for image decoding, rendering, and encoding
 - UniformTypeIdentifiers for PNG/JPEG format identifiers
+- Swift Testing for the test suite
 - Shell packaging script using `swift build`, `sips`, `iconutil`, `codesign`, and `ditto`
 
 There are no third-party dependencies.
@@ -96,13 +105,16 @@ Sources/
   ImageCentererCore/
     ImageCenteringProcessor.swift  image loading, fitting, rendering, encoding
     ExportFileNamer.swift          export destination naming
-  ImageCentererTestRunner/
-    main.swift                behavior test runner for image processing
 Tests/
   ImageCentererCoreTests/
-    PackageTestPlaceholder.swift   placeholder SwiftPM test target
+    ImageCenteringProcessorTests.swift  behavior tests for processing and naming
 scripts/
-  package-app.sh              builds a local .app bundle and release zip
+  package-app.sh              builds a local .app bundle and zip
+  test.sh                     runs swift test, adding toolchain paths when needed
+.github/
+  workflows/
+    ci.yml                    GitHub Actions build/test/package check
+VERSION                       current app version, read by package-app.sh
 app-icon.png                  source image used for the packaged app icon
 ```
 
@@ -114,7 +126,7 @@ Generated files are written under `dist/` and `.build/`; both are ignored by git
 - Swift 6.2 or newer
 - Command-line tools that include `swift`, `sips`, `iconutil`, `codesign`, and `ditto`
 
-No environment variables are required.
+The Apple Command Line Tools are enough; a full Xcode installation is not required. No environment variables are required.
 
 ## Run From Source
 
@@ -132,19 +144,15 @@ Build all targets:
 swift build
 ```
 
-Run SwiftPM’s test command:
+Run the test suite:
 
 ```sh
-swift test
+./scripts/test.sh
 ```
 
-Run the image behavior checks:
+The script wraps `swift test`. With a full Xcode installation, plain `swift test` also works; the script exists because machines with only the Command Line Tools need extra compiler flags to locate the Swift Testing framework, and it adds them automatically.
 
-```sh
-swift run ImageCentererTestRunner
-```
-
-`ImageCentererTestRunner` is the meaningful test suite for this project. It generates temporary fixture images and verifies:
+The suite generates temporary fixture images and verifies:
 
 - smaller images are not scaled up
 - larger images are scaled down to fit

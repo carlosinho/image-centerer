@@ -6,12 +6,11 @@ There is no server, database, authentication, background daemon, network integra
 
 ## Targets
 
-`Package.swift` defines four targets:
+`Package.swift` defines three targets:
 
 - `ImageCentererCore`: reusable image-processing and filename logic.
 - `ImageCenterer`: SwiftUI macOS executable app.
-- `ImageCentererTestRunner`: executable behavior test runner.
-- `ImageCentererCoreTests`: placeholder SwiftPM test target.
+- `ImageCentererCoreTests`: Swift Testing suite covering image behavior and export naming.
 
 The app target depends on `ImageCentererCore`. The core target does not depend on SwiftUI or AppKit.
 
@@ -233,6 +232,8 @@ The implementation accepts a `fileExists` closure, which allows tests to verify 
 
 The project is a Swift Package, not an Xcode app project. `scripts/package-app.sh` creates the `.app` bundle manually.
 
+The app version comes from the script's first argument when given, otherwise from the `VERSION` file at the repository root. `VERSION` is the source of truth; git tags (`v0.1.3`) are expected to match it.
+
 The script:
 
 1. Runs `swift build -c release --product ImageCenterer`.
@@ -244,7 +245,11 @@ The script:
 7. Applies ad-hoc signing with `codesign --force --deep --sign -` when `codesign` is available.
 8. Creates `dist/Image-Centerer-macOS-$VERSION.zip` with `ditto`.
 
-The generated `dist/` directory is ignored by git. Release zips are intended to be uploaded as GitHub Release assets, not committed.
+The generated `dist/` directory is ignored by git.
+
+Distribution is build-it-yourself: no binaries are published. Users clone the repository and run the packaging script locally. An app compiled on the user's own machine never receives the `com.apple.quarantine` attribute, so Gatekeeper does not block it and no signing or notarization is needed.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs `swift build`, the test suite, and the packaging script on every push and pull request to verify the source builds cleanly on a machine other than the author's.
 
 ## API Architecture
 
@@ -317,7 +322,7 @@ The app is local-only and does not transmit images.
 
 Input files are decoded with system ImageIO APIs. Malformed files can fail decode and are marked failed in the UI.
 
-The package script applies ad-hoc signing only. It does not provide Developer ID signing or notarization. Users downloading from GitHub may need to right-click and choose **Open** the first time.
+The package script applies ad-hoc signing only. It does not provide Developer ID signing or notarization. Because the app is always built locally rather than downloaded, Gatekeeper quarantine does not apply and the app opens normally.
 
 The app writes only to the export folder selected by the user during the export flow.
 
@@ -334,16 +339,17 @@ Memory usage is proportional to the decoded source image plus the rendered outpu
 
 ## Testing And Maintenance Notes
 
-`swift test` currently builds a placeholder test target. The meaningful behavior coverage is in `ImageCentererTestRunner`, which is an executable target.
+The behavior coverage lives in `Tests/ImageCentererCoreTests`, a Swift Testing suite run through `swift test`.
 
-Run both:
+Run it with:
 
 ```sh
-swift test
-swift run ImageCentererTestRunner
+./scripts/test.sh
 ```
 
-The test runner creates temporary fixture images and checks actual rendered pixels after processing. It covers the important image rules and export naming behavior.
+The script wraps `swift test`. On machines with only the Apple Command Line Tools installed (no Xcode), Swift Testing's framework is not on the default compiler search path and the `_Testing_Foundation` cross-import overlay ships without Swift module interfaces, so the script passes the framework paths explicitly and disables cross-import overlays. With a full Xcode installation, the script falls through to plain `swift test`.
+
+The suite creates temporary fixture images and checks actual rendered pixels after processing. It covers the important image rules and export naming behavior.
 
 Maintenance-sensitive areas:
 
@@ -364,6 +370,6 @@ These are current facts, not planned work:
 - No custom output naming pattern.
 - No overwrite option.
 - No concurrent export processing.
-- No notarized release pipeline.
+- No prebuilt binary distribution; the app is built from source.
 - No explicit EXIF orientation handling.
 - No metadata preservation.

@@ -88,7 +88,7 @@ The app currently uses standard file picker dialogs. It does not implement drag-
 - CoreGraphics and ImageIO for image decoding, rendering, and encoding
 - UniformTypeIdentifiers for PNG/JPEG format identifiers
 - Swift Testing for the test suite
-- Shell packaging script using `swift build`, `sips`, `iconutil`, `codesign`, and `ditto`
+- Shell packaging script using `swift build`, `sips`, `iconutil`, and `codesign`
 
 There are no third-party dependencies.
 
@@ -109,7 +109,7 @@ Tests/
   ImageCentererCoreTests/
     ImageCenteringProcessorTests.swift  behavior tests for processing and naming
 scripts/
-  package-app.sh              builds a local .app bundle and zip
+  package-app.sh              builds a local .app bundle
   test.sh                     runs swift test, adding toolchain paths when needed
 .github/
   workflows/
@@ -124,7 +124,7 @@ Generated files are written under `dist/` and `.build/`; both are ignored by git
 
 - macOS 15 or newer
 - Swift 6.2 or newer
-- Command-line tools that include `swift`, `sips`, `iconutil`, `codesign`, and `ditto`
+- Command-line tools that include `swift`, `sips`, `iconutil`, and `codesign`
 
 The Apple Command Line Tools are enough; a full Xcode installation is not required. No environment variables are required.
 

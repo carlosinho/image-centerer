@@ -13,7 +13,6 @@ APP_DIR="$DIST_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
-ZIP_NAME="Image-Centerer-macOS-$VERSION.zip"
 ICON_SOURCE="$ROOT_DIR/app-icon.png"
 ICONSET_DIR="$DIST_DIR/ImageCenterer.iconset"
 ICON_FILE="ImageCenterer.icns"
@@ -24,7 +23,7 @@ echo "Building $PRODUCT_NAME release binary..."
 swift build -c release --product "$PRODUCT_NAME"
 
 echo "Creating app bundle..."
-rm -rf "$APP_DIR" "$DIST_DIR/$ZIP_NAME" "$ICONSET_DIR"
+rm -rf "$APP_DIR" "$ICONSET_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp ".build/release/$PRODUCT_NAME" "$MACOS_DIR/$APP_NAME"
@@ -107,12 +106,5 @@ if command -v codesign >/dev/null 2>&1; then
     codesign --force --deep --sign - "$APP_DIR"
 fi
 
-echo "Creating zip..."
-(
-    cd "$DIST_DIR"
-    ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_NAME"
-)
-
 echo "Done."
 echo "App: $APP_DIR"
-echo "Zip: $DIST_DIR/$ZIP_NAME"

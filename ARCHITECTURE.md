@@ -243,7 +243,6 @@ The script:
 5. Converts `app-icon.png` to an `.icns` file if the PNG exists.
 6. Writes `Contents/Resources/ImageCenterer.icns`.
 7. Applies ad-hoc signing with `codesign --force --deep --sign -` when `codesign` is available.
-8. Creates `dist/Image-Centerer-macOS-$VERSION.zip` with `ditto`.
 
 The generated `dist/` directory is ignored by git.
 

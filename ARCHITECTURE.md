@@ -1,8 +1,8 @@
 # Architecture
 
-Image Centerer is a local-only macOS image processing app. The implementation is intentionally small: a SwiftUI shell owns user interaction, and a separate core target owns deterministic image processing and export naming.
+Image Centerer is a macOS app that processes images locally. The implementation is intentionally small: a SwiftUI shell owns user interaction, and a separate core target owns deterministic image processing and export naming.
 
-There is no server, database, authentication, background daemon, network integration, plugin system, or persistent app state.
+There is no server, database, authentication, background daemon, plugin system, or persistent image state. The only network integration is the update check, which fetches the latest release metadata from the GitHub API; image data never leaves the machine.
 
 ## Targets
 
@@ -145,9 +145,25 @@ When the transparent background is selected, the preview draws a checkerboard pa
 
 The batch continues after individual file failures. Canceling export stops the loop before starting another item; it does not delete files that were already written.
 
+### Update Check
+
+`UpdateChecker` (app target) owns the update flow. Pure decision logic lives in `UpdateCheck.swift` in the core target:
+
+- `AppVersion` parses dot-separated numeric version strings (tolerating a `v` prefix and whitespace) and compares them component by component, treating missing components as zero.
+- `UpdateCheckSchedule.isCheckDue(lastCheck:now:)` decides whether the weekly check should run.
+
+There are two entry points:
+
+- **Manual:** the `Check for Updates…` item in the app menu (`CommandGroup(after: .appInfo)` in `ImageCentererApp`) always reports a result: update available, up to date, or check failed.
+- **Scheduled:** `AppDelegate.applicationDidFinishLaunching` runs a check if the last one was more than seven days ago. It alerts only when a newer release exists; "up to date" and network failures stay silent, and a failed check does not update the last-check date, so it retries on a later launch.
+
+A check is one HTTPS `GET` to `https://api.github.com/repos/carlosinho/image-centerer/releases/latest`. The release `tag_name` is compared against the app's `CFBundleShortVersionString`, which `package-app.sh` writes from the `VERSION` file. Builds run through `swift run` have no bundle version: the scheduled check is skipped and a manual check reports the latest release without comparing.
+
+Because distribution is build-from-source, the update alert cannot install anything; it explains the `git pull` + `scripts/package-app.sh` path and offers to open the release page. The last successful check date is stored in `UserDefaults` under `lastUpdateCheckDate`.
+
 ## Models And State
 
-There is no persistence layer and no database.
+There is no persistence layer and no database. The only persisted value is the update check's last-check date in `UserDefaults`.
 
 Runtime state lives in SwiftUI `@State` properties in `ContentView`:
 
@@ -266,6 +282,8 @@ public struct PreviewImage
 public protocol ImageCenteringProcessing
 public struct ImageCenteringProcessor
 public enum ExportFileNamer
+public struct AppVersion
+public enum UpdateCheckSchedule
 ```
 
 The main public processing call is:
@@ -317,7 +335,7 @@ try processed.data.write(to: destination, options: .atomic)
 
 ## Security Considerations
 
-The app is local-only and does not transmit images.
+The app does not transmit images. The only outbound request is the update check: an unauthenticated HTTPS `GET` for the latest GitHub release, carrying no user data beyond what any HTTPS request exposes.
 
 Input files are decoded with system ImageIO APIs. Malformed files can fail decode and are marked failed in the UI.
 
@@ -365,7 +383,8 @@ These are current facts, not planned work:
 - macOS only.
 - No CLI for processing images directly.
 - No drag-and-drop input.
-- No user preferences persistence.
+- No user preferences persistence beyond the update check's last-check date.
+- No way to disable the weekly update check from the UI.
 - No custom output naming pattern.
 - No overwrite option.
 - No concurrent export processing.

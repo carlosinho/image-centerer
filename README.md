@@ -8,7 +8,7 @@
     <td valign="middle">
       <strong>Image Centerer</strong> is a local macOS app for placing PNG and JPG images onto a fixed-size white canvas. It is built for batch image cleanup: choose images, choose the final canvas size, optionally add padding around the image, preview the result, and export processed files.
       <br /><br />
-      The app does not upload images, call external services, or store a library. All processing happens locally on the selected files.
+      The app does not upload images or store a library. All processing happens locally on the selected files.
     </td>
   </tr>
 </table>
@@ -60,6 +60,22 @@ The finished app is written to `dist/Image Centerer.app`. Move it to `/Applicati
 
 Because you compiled the app on your own machine, macOS Gatekeeper does not quarantine it: there is no "unidentified developer" warning and no right-click-to-open workaround. Quarantine only applies to files downloaded from the internet, so building from source avoids the problem entirely without Developer ID signing or notarization.
 
+## Check for Updates
+
+The app can tell you when a newer release is available on GitHub:
+
+- **Image Centerer → Check for Updates…** in the menu bar checks immediately and always shows the result.
+- On launch, the app checks automatically if the last check was more than a week ago. This check is silent: it only shows an alert when a newer release exists.
+
+A check is a single HTTPS request to the GitHub API for the repository's latest release; nothing else is sent. Because the app is built from source, updating means pulling the repository and re-running the packaging script:
+
+```sh
+git pull
+./scripts/package-app.sh
+```
+
+Development builds started with `swift run` have no embedded version number, so the scheduled check is skipped for them.
+
 ## Main User Flow
 
 1. Open the app.
@@ -87,6 +103,7 @@ The app currently uses standard file picker dialogs. It does not implement drag-
 - AppKit `NSOpenPanel` for input/export folder selection and `NSImage` display in the app target
 - CoreGraphics and ImageIO for image decoding, rendering, and encoding
 - UniformTypeIdentifiers for PNG/JPEG format identifiers
+- Foundation `URLSession` for the GitHub release update check
 - Swift Testing for the test suite
 - Shell packaging script using `swift build`, `sips`, `iconutil`, and `codesign`
 
@@ -102,12 +119,15 @@ Sources/
     FileSelection.swift        macOS open panels
     ImageCentererApp.swift     app entry point and activation policy
     ImageJob.swift             UI job/status model
+    UpdateChecker.swift        GitHub release check and update alerts
   ImageCentererCore/
     ImageCenteringProcessor.swift  image loading, fitting, rendering, encoding
     ExportFileNamer.swift          export destination naming
+    UpdateCheck.swift              version comparison and check scheduling
 Tests/
   ImageCentererCoreTests/
     ImageCenteringProcessorTests.swift  behavior tests for processing and naming
+    UpdateCheckTests.swift              version comparison and schedule tests
 scripts/
   package-app.sh              builds a local .app bundle
   test.sh                     runs swift test, adding toolchain paths when needed
@@ -165,6 +185,8 @@ The suite generates temporary fixture images and verifies:
 - unsupported extensions fail
 - differently sized images are processed independently
 - export naming preserves original names and increments conflicts
+- version strings parse and compare numerically for the update check
+- the scheduled update check fires only after a week has passed
 
 ## License
 

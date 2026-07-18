@@ -93,7 +93,7 @@ Preview updates live as the selected image, canvas size, or padding changes. Pre
 
 Exports run asynchronously so the window stays responsive. Use **Cancel** to stop a long batch after the current in-flight item finishes.
 
-The app currently uses standard file picker dialogs. It does not implement drag-and-drop.
+The app uses standard file picker dialogs.
 
 ## Tech Stack
 

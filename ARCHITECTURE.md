@@ -345,12 +345,12 @@ The app writes only to the export folder selected by the user during the export 
 
 ## Performance Characteristics
 
-Processing is currently synchronous on the main UI path:
+Preview and export both run off the main UI path:
 
-- preview processing runs in response to UI state changes
-- export loops over jobs on the main actor/UI interaction path
+- preview requests are lightly debounced, cancel the previous preview task, and render a capped-size bitmap in a detached user-initiated task
+- export runs in its own task, processing and writing each image in a detached user-initiated task, updating per-item progress text and checking for cancellation between items
 
-This is acceptable for small batches and moderate image sizes, but large images or large batches can make the UI feel blocked. There is no background queue, cancellation, streaming pipeline, or progress per file beyond final job status updates.
+The UI stays responsive during export, but images are still processed strictly one at a time; there is no concurrent export processing, so a single very large image or canvas still makes that item slow.
 
 Memory usage is proportional to the decoded source image plus the rendered output canvas and encoded data. Very large canvas sizes will allocate large bitmap contexts.
 
@@ -375,19 +375,3 @@ Maintenance-sensitive areas:
 - `ExportFileNamer` conflict behavior
 - packaging script icon generation and `Info.plist` keys
 - Swift 6 actor isolation around AppKit panels
-
-## Existing Limitations
-
-These are current facts, not planned work:
-
-- macOS only.
-- No CLI for processing images directly.
-- No drag-and-drop input.
-- No user preferences persistence beyond the update check's last-check date.
-- No way to disable the weekly update check from the UI.
-- No custom output naming pattern.
-- No overwrite option.
-- No concurrent export processing.
-- No prebuilt binary distribution; the app is built from source.
-- No explicit EXIF orientation handling.
-- No metadata preservation.

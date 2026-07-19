@@ -1,12 +1,12 @@
-<h1 align="center">Image Centerer</h1>
+<h1 align="center">Owlign Image Centerer</h1>
 
 <table>
   <tr>
     <td width="240" align="center" valign="top">
-      <img src="app-icon.png" alt="Image Centerer logo" width="220" />
+      <img src="app-icon.png" alt="Owlign Image Centerer logo" width="220" />
     </td>
     <td valign="middle">
-      <strong>Image Centerer</strong> is a local macOS app for placing PNG and JPG images onto a fixed-size white canvas. It is built for batch image cleanup: choose images, choose the final canvas size, optionally add padding around the image, preview the result, and export processed files.
+      <strong>Owlign Image Centerer</strong> is a local macOS app for placing PNG and JPG images onto a fixed-size white canvas. It is built for batch image cleanup: choose images, choose the final canvas size, optionally add padding around the image, preview the result, and export processed files.
       <br /><br />
       The app does not upload images or store a library. All processing happens locally on the selected files.
     </td>
@@ -14,12 +14,12 @@
 </table>
 
 <p align="center">
-  <img src="image-centerer-scr.png" alt="Image Centerer app screenshot" width="900" />
+  <img src="image-centerer-scr.png" alt="Owlign Image Centerer app screenshot" width="900" />
 </p>
 
 ## What It Does
 
-For each selected image, Image Centerer creates a new output image with the requested pixel dimensions.
+For each selected image, Owlign Image Centerer creates a new output image with the requested pixel dimensions.
 
 The processing rules are:
 
@@ -48,7 +48,7 @@ avatar.png   -> avatar 2.png
 
 ## Build It Yourself
 
-Image Centerer is distributed as source only — there is no prebuilt binary to download. Build the app locally:
+Owlign Image Centerer is distributed as source only — there is no prebuilt binary to download. Build the app locally:
 
 ```sh
 git clone https://github.com/carlosinho/image-centerer.git
@@ -56,7 +56,7 @@ cd image-centerer
 ./scripts/package-app.sh
 ```
 
-The finished app is written to `dist/Image Centerer.app`. Move it to `/Applications` or run it from `dist/` directly.
+The finished app is written to `dist/Owlign.app`. Move it to `/Applications` or run it from `dist/` directly.
 
 Because you compiled the app on your own machine, macOS Gatekeeper does not quarantine it: there is no "unidentified developer" warning and no right-click-to-open workaround. Quarantine only applies to files downloaded from the internet, so building from source avoids the problem entirely without Developer ID signing or notarization.
 
@@ -64,7 +64,7 @@ Because you compiled the app on your own machine, macOS Gatekeeper does not quar
 
 The app can tell you when a newer release is available on GitHub:
 
-- **Image Centerer → Check for Updates…** in the menu bar checks immediately and always shows the result.
+- **Owlign → Check for Updates…** in the menu bar checks immediately and always shows the result.
 - On launch, the app checks automatically if the last check was more than a week ago. This check is silent: it only shows an alert when a newer release exists.
 
 A check is a single HTTPS request to the GitHub API for the repository's latest release; nothing else is sent. Because the app is built from source, updating means pulling the repository and re-running the packaging script:
@@ -190,4 +190,4 @@ The suite generates temporary fixture images and verifies:
 
 ## License
 
-Image Centerer is available under the MIT License. See `LICENSE`.
+Owlign Image Centerer is available under the MIT License. See `LICENSE`.

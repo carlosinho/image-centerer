@@ -5,7 +5,7 @@ struct ImageCentererApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("Owlign Image Centerer") {
             ContentView()
                 .frame(minWidth: 920, minHeight: 620)
         }

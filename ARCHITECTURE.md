@@ -1,6 +1,6 @@
 # Architecture
 
-Image Centerer is a macOS app that processes images locally. The implementation is intentionally small: a SwiftUI shell owns user interaction, and a separate core target owns deterministic image processing and export naming.
+Owlign Image Centerer is a macOS app that processes images locally. The implementation is intentionally small: a SwiftUI shell owns user interaction, and a separate core target owns deterministic image processing and export naming.
 
 There is no server, database, authentication, background daemon, plugin system, or persistent image state. The only network integration is the update check, which fetches the latest release metadata from the GitHub API; image data never leaves the machine.
 
@@ -253,8 +253,8 @@ The app version comes from the script's first argument when given, otherwise fro
 The script:
 
 1. Runs `swift build -c release --product ImageCenterer`.
-2. Creates `dist/Image Centerer.app`.
-3. Copies `.build/release/ImageCenterer` to `Contents/MacOS/Image Centerer`.
+2. Creates `dist/Owlign.app`.
+3. Copies `.build/release/ImageCenterer` to `Contents/MacOS/Owlign`.
 4. Writes `Contents/Info.plist`.
 5. Converts `app-icon.png` to an `.icns` file if the PNG exists.
 6. Writes `Contents/Resources/ImageCenterer.icns`.

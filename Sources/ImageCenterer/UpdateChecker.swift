@@ -81,13 +81,13 @@ final class UpdateChecker {
         if current < latest {
             showAlert(
                 title: "Update Available",
-                message: "Image Centerer \(release.tagName) is available. You have \(currentVersionText). \(Self.updateInstructions)",
+                message: "Owlign \(release.tagName) is available. You have \(currentVersionText). \(Self.updateInstructions)",
                 linkURL: release.htmlURL ?? Self.repositoryURL
             )
         } else if !silently {
             showAlert(
                 title: "You're Up to Date",
-                message: "Image Centerer \(currentVersionText) is the latest version."
+                message: "Owlign \(currentVersionText) is the latest version."
             )
         }
     }

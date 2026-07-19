@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="Image Centerer"
+APP_NAME="Owlign"
 PRODUCT_NAME="ImageCenterer"
-BUNDLE_ID="com.local.image-centerer"
+BUNDLE_ID="com.local.owlign-image-centerer"
 # Version comes from the first argument, else the VERSION file at the repo root.
 VERSION="${1:-$(tr -d '[:space:]' < "$ROOT_DIR/VERSION" 2>/dev/null || echo "0.0.0-dev")}"
 

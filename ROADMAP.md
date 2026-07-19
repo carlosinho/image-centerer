@@ -45,7 +45,11 @@ Stable at v0.1.5 — all shipped features work and are covered by tests.
 - [x] Version logic in core (`AppVersion` parsing/comparison, `UpdateCheckSchedule`) with tests; single HTTPS GET to the GitHub latest-release API; last-check date in `UserDefaults`
 - [x] `VERSION` file as source of truth for the app version, written into the bundle by `package-app.sh`; `swift run` builds have no version and skip the scheduled check
 
-### v0.2.0 - UI improvement
+### v0.2.0 - Branding and UI improvement
+- [x] Change branding to Owlign
+  - App name should be: Owlign
+  - App title in the main window should say: Owlign Image Centerer
+  - The readme should label the app from now: Owlign Image Centerer
 - [ ] Drag-and-drop file input (the app only uses standard file picker dialogs now)
 
 ### Backlog / Future

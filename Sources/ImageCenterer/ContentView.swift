@@ -62,6 +62,7 @@ struct ContentView: View {
                         .padding(.bottom, 12)
                 }
             }
+            .frame(minWidth: 600)
         }
         .onChange(of: selectedJobID) { _, _ in refreshPreview() }
         .onChange(of: canvasWidth) { _, _ in refreshPreview() }
@@ -76,6 +77,32 @@ struct ContentView: View {
     }
 
     private var controls: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                fileActions
+                Spacer()
+                canvasFields
+                paddingFields
+                transparencyToggle
+                exportActions
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    fileActions
+                    exportActions
+                    Spacer()
+                }
+                HStack(spacing: 12) {
+                    canvasFields
+                    paddingFields
+                    transparencyToggle
+                }
+            }
+        }
+        .padding(16)
+    }
+
+    private var fileActions: some View {
         HStack(spacing: 12) {
             Button("Add Images") {
                 addImages(FileSelection.selectInputImages())
@@ -91,33 +118,50 @@ struct ContentView: View {
                 didInitializeCanvas = false
             }
             .disabled(jobs.isEmpty || isExporting)
+        }
+    }
 
-            Spacer()
-
+    private var canvasFields: some View {
+        HStack(spacing: 12) {
             Text("Canvas")
                 .foregroundStyle(.secondary)
+                .fixedSize()
             TextField("Width", text: $canvasWidth)
                 .frame(width: 88)
                 .textFieldStyle(.roundedBorder)
             TextField("Height", text: $canvasHeight)
                 .frame(width: 88)
                 .textFieldStyle(.roundedBorder)
+        }
+    }
 
+    private var paddingFields: some View {
+        HStack(spacing: 12) {
             Text("Padding")
                 .foregroundStyle(.secondary)
+                .fixedSize()
             TextField("X", text: $paddingX)
                 .frame(width: 72)
                 .textFieldStyle(.roundedBorder)
             TextField("Y", text: $paddingY)
                 .frame(width: 72)
                 .textFieldStyle(.roundedBorder)
+        }
+    }
 
+    private var transparencyToggle: some View {
+        HStack(spacing: 12) {
             Text("Transp.")
                 .foregroundStyle(.secondary)
+                .fixedSize()
             Toggle("Transp.", isOn: $isTransparentBackground)
                 .toggleStyle(.switch)
                 .labelsHidden()
+        }
+    }
 
+    private var exportActions: some View {
+        HStack(spacing: 12) {
             Button("Export") {
                 exportImages()
             }
@@ -129,7 +173,6 @@ struct ContentView: View {
             }
             .disabled(!isExporting)
         }
-        .padding(16)
     }
 
     private var preview: some View {

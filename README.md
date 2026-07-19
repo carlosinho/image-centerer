@@ -79,7 +79,7 @@ Development builds started with `swift run` have no embedded version number, so 
 ## Main User Flow
 
 1. Open the app.
-2. Click **Add Images** and select one or more PNG/JPG files.
+2. Click **Add Images** and select one or more PNG/JPG files, or drag them from Finder and drop them anywhere in the window.
 3. The canvas width and height are initialized from the first successfully loaded image.
 4. Edit canvas width/height if needed.
 5. Optionally set X and Y padding.
@@ -93,7 +93,7 @@ Preview updates live as the selected image, canvas size, or padding changes. Pre
 
 Exports run asynchronously so the window stays responsive. Use **Cancel** to stop a long batch after the current in-flight item finishes.
 
-The app uses standard file picker dialogs.
+The app uses standard file picker dialogs. Input images can also be dragged and dropped onto the window; unsupported files and folders in a drop are ignored.
 
 ## Tech Stack
 

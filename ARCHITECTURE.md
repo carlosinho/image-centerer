@@ -82,7 +82,10 @@ imageH = sourceHeight * scale
 
 ### Image Selection
 
-`ContentView` calls `FileSelection.selectInputImages()`.
+There are two input paths, both feeding `ContentView.addImages(_:)`:
+
+- **Picker:** `ContentView` calls `FileSelection.selectInputImages()`.
+- **Drag and drop:** a `.dropDestination(for: URL.self)` on the main view accepts file URLs dropped anywhere on the window. Dropped URLs are filtered through `ImageFormat.detect(from:)`, so non-file URLs, unsupported extensions, and folders are ignored; a drop with no supported files is rejected. While a drag hovers, the window shows an accent-colored border.
 
 `FileSelection` creates an `NSOpenPanel` configured with:
 
@@ -92,7 +95,7 @@ imageH = sourceHeight * scale
 - directories disabled
 - alias resolution enabled
 
-For each selected URL, `ContentView.addImages(_:)`:
+For each selected or dropped URL, `ContentView.addImages(_:)`:
 
 1. Skips the URL if it is already present in `jobs`.
 2. Calls `ImageCenteringProcessor.imageInfo(at:)`.

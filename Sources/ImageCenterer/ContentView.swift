@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var paddingY = ""
     @State private var isTransparentBackground = false
     @State private var didInitializeCanvas = false
+    @State private var isDropTargeted = false
     @State private var previewImage: NSImage?
     @State private var isExporting = false
     @State private var summaryText = ""
@@ -73,6 +74,22 @@ struct ContentView: View {
         .onDisappear {
             previewTask?.cancel()
             exportTask?.cancel()
+        }
+        .dropDestination(for: URL.self) { urls, _ in
+            let supported = urls.filter { url in
+                url.isFileURL && (try? ImageFormat.detect(from: url)) != nil
+            }
+            guard !supported.isEmpty else { return false }
+            addImages(supported)
+            return true
+        } isTargeted: { targeted in
+            isDropTargeted = targeted
+        }
+        .overlay {
+            if isDropTargeted {
+                Rectangle()
+                    .strokeBorder(Color.accentColor, lineWidth: 3)
+            }
         }
     }
 
@@ -190,7 +207,7 @@ struct ContentView: View {
                     }
                     .padding(24)
             } else {
-                Text(jobs.isEmpty ? "Add JPG or PNG images" : "Enter a valid canvas size and padding")
+                Text(jobs.isEmpty ? "Add or drop JPG or PNG images" : "Enter a valid canvas size and padding")
                     .foregroundStyle(.secondary)
             }
         }

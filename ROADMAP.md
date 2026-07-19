@@ -50,7 +50,7 @@ Stable at v0.1.5 — all shipped features work and are covered by tests.
   - App name should be: Owlign
   - App title in the main window should say: Owlign Image Centerer
   - The readme should label the app from now: Owlign Image Centerer
-- [ ] Drag-and-drop file input (the app only uses standard file picker dialogs now)
+- [x] Drag-and-drop file input — drop PNG/JPG files anywhere on the window; unsupported files and folders are filtered out, then the drop feeds the same `addImages(_:)` path as the picker
 
 ### Backlog / Future
 
